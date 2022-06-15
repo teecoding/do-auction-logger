@@ -152,7 +152,7 @@ class Logger:
 
     # Helper function for swapping servers
     def _swapServer(self, next_server):
-        print(formattedLogMsg(f'Will swao from {self.current_server} to {next_server} after {SERVER_SWAP_DELAY} seconds'))
+        print(formattedLogMsg(f'Will swap from {self.current_server} to {next_server} after {SERVER_SWAP_DELAY} seconds'))
         sleep(SERVER_SWAP_DELAY)
 
         for server in self.server_links:
