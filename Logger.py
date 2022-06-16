@@ -1,7 +1,8 @@
-from time import sleep
 import requests
 import os
 import json
+
+from time import sleep
 from datetime import datetime
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
@@ -22,32 +23,19 @@ class Logger:
         self.session = requests.Session()
 
         self.server_links = []
-        self.server_after_login = None
-        self.current_server = None
-        self.auction = {
-            "hour": {
-                "start": None,
-                "end": None,
-                "items": []
-            },
-            "day":  {
-                "start": None,
-                "end": None,
-                "items": []
-            },
-            "week":  {
-                "start": None,
-                "end": None,
-                "items": []
-            },
-        }
+        self.server_after_login = ""
+        self.current_server = ""
+        self.history_id = None
+        self.start_at = ""
+        self.end_at = ""
+        self.soup = None
 
         self._login()
 
     # Start logging auction data from servers
     def start(self):
-        for type in AUCTION_TYPES:
-            self._log(type)
+        for auction_type in AUCTION_TYPES:
+            self._log(auction_type)
 
         self._swapServer(SERVERS[0])
             
@@ -56,8 +44,8 @@ class Logger:
 
             self._load()
 
-            for type in AUCTION_TYPES:
-                self._log(type)
+            for auction_type in AUCTION_TYPES:
+                self._log(auction_type)
 
             try: 
                 if SERVERS[id+1] != self.server_after_login:
@@ -66,19 +54,12 @@ class Logger:
                     self.current_server = SERVERS[id-1]
             except:
                 break
-        formattedLogMsg('Done.')
+        print(formattedLogMsg('Done.'))
 
     # Create necessary folders if they don't exist
-    def _prepareFolders(self):
+    def _createDataFolder(self):
         if os.path.exists(f"{ROOT_PATH}/data") == False:
             os.mkdir(f"{ROOT_PATH}/data")
-
-        if os.path.exists(f"{ROOT_PATH}/data/{self.current_server}") == False:
-            os.mkdir(f"{ROOT_PATH}/data/{self.current_server}")
-        
-        for type in AUCTION_TYPES:
-            if os.path.exists(f"{ROOT_PATH}/data/{self.current_server}/{type}") == False:
-                os.mkdir(f"{ROOT_PATH}/data/{self.current_server}/{type}")
 
     # Login to darkorbit and store current server
     def _login(self):
@@ -92,34 +73,42 @@ class Logger:
 
     # Load auction and scrappe data from it
     def _load(self):
-        self._clearData()
-        print(formattedLogMsg('Loading auction..'))
-        res = self.session.get(f"https://{self.current_server}.darkorbit.com/indexInternal.es?action=internalAuction")
-        soup = BeautifulSoup(res.content, 'lxml')
+        self.items = {
+            "hour": [],
+            "day": [],
+            "week": [],
+        }
+        res = self.session.get(f"https://{self.current_server}.darkorbit.com/indexInternal.es?action=internalAuction&lang=en")
+        self.soup = BeautifulSoup(res.content, 'lxml')
 
         try:
-            for type in AUCTION_TYPES:
-                self._getStartEndDate(soup, type)
-                self._getItems(soup, type)
+            for auction_type in AUCTION_TYPES:
+                self._getStartEndDate(auction_type)
+                self._getItems(auction_type)
             self._getServerLinks()
         except:
             print(formattedLogMsg('Unable to get auction data. Are you sure you have correct credentials?', 'ERROR'))
             exit()
 
     # Get latest auction items
-    def _getItems(self, soup: BeautifulSoup, type):
-        for items in soup.find(id=f"auction_content_{type}").find_all('div', {"class":"auction_list_history"}):
+    def _getItems(self, auction_type):
+        for items in self.soup.find(id=f"auction_content_{auction_type}").find_all('div', {"class":"auction_list_history"}):
             for item in items.find('tbody', {"class":"auction_history_wrapper"}).find_all("tr", {"class": "auctionItemRow"}):
-                self.auction[type]['items'] += [self._parseItem(item)]
+                self.items[auction_type] += [self._parseItem(auction_type, item)]
 
     # Get latest auction end date
-    def _getStartEndDate(self, soup: BeautifulSoup, type):
-        end = datetime.strptime(soup.find(id=f"auction_history_selection_{type}").find_all('div', {"class": "filter_item"})[0].text.strip(), '%Y-%m-%d %H:%M:%S')
+    def _getStartEndDate(self, auction_type):
+        date_element = self.soup.find(id=f"auction_history_selection_{auction_type}").find_all('div', {"class": "filter_item"})[0]
+        self.history_id = date_element['id'].replace('history_','')
+
+        end = datetime.strptime(date_element.text.strip(), '%Y-%m-%d %H:%M:%S')
+
         hour = f"0{end.hour}" if end.hour <= 9 else end.hour
         second = f"0{end.second}" if end.second <= 9 else end.second
-        self.auction[type]['end'] = f"{end.date()} {hour}:{end.minute}:{second}"
+        self.end_at = f"{end.date()} {hour}:{end.minute}:{second}"
+        
         hour = 23 if end.hour -1 == -1 else end.hour - 1
-        self.auction[type]['start'] = f"{end.date()} {hour}:{end.minute}:{second}"
+        self.start_at = f"{end.date()} {hour}:{end.minute}:{second}"
 
     # Get server links
     def _getServerLinks(self):
@@ -131,24 +120,39 @@ class Logger:
             self.server_links += [{ server_name: server['target'] }]
 
     # Log auction items into file
-    def _log(self, type):
-        self._prepareFolders()
-        filename = self.auction[type]['end'].replace('-', '').replace(':', '').replace(' ', '');
-        filepath = f"{ROOT_PATH}/data/{self.current_server}/{type}/{filename}.json"
+    def _log(self, auction_type):
+        self._createDataFolder()
+        filename = f"{self.current_server}-{auction_type}-{self.end_at.replace('-', '').replace(':', '').replace(' ', '')}.jsonl"
+        filepath = f"{ROOT_PATH}/data/{filename}"
+
         if os.path.exists(filepath) == False:
             with open(f"{filepath}", 'a+') as f:
-                f.write(json.dumps(self.auction[type], indent=4, separators=(',',': '), ensure_ascii=False).encode('utf8').decode())
+                for item in self.items[auction_type]:
+                    f.write(json.dumps(item, ensure_ascii=False).encode('utf8').decode() + '\n')
                 f.close()
-            print(formattedLogMsg(f'Auction was logged - {filepath}'))
+            print(formattedLogMsg(f'Auction was logged - {self.current_server} - {auction_type} - {filename}'))
 
     # Helper function for parsing auction items from html
-    def _parseItem(self, item: BeautifulSoup):
+    def _parseItem(self, auction_type, item: BeautifulSoup):
         return {
-            "name": item.find('td',{'class':'auction_history_name_col'}).text.strip(),
-            "type": item.find('td',{'class':'auction_history_type'}).text.strip(),
+            "history_id": self.history_id,
+            "server": self.current_server,
+            "auction_type": auction_type,
+            "name": self._getItemLootId(auction_type, item.find('td', {'class': 'auction_history_name_col'}).text.strip()),
             "winner": item.find('td',{'class':'auction_history_winner'}).text.strip(),
-            "payed": item.find('td',{'class':'auction_history_current'}).text.strip(),
+            "payed": item.find('td',{'class':'auction_history_current'}).text.strip().replace('.',''),
+            "start_at": self.start_at,
+            "end_at": self.end_at 
         }
+
+    def _getItemLootId(self, auction_type, item_name):
+        for items in self.soup.find(id=f"auction_content_{auction_type}").find_all('div', {"class":"auction_list_current"}):
+            for item in items.find('tbody', {"class":"auction_item_wrapper"}).find_all("tr", {"class": "auctionItemRow"}):
+                if item.find('td', {"class": "auction_item_name_col"}).text.strip() == item_name:
+                    return item.find('input', {'id': f"{item['itemkey']}_lootId"})['value']
+
+        raise ValueError(formattedLogMsg(f'Item with name {item_name} was not found..','ERROR'))
+
 
     # Helper function for swapping servers
     def _swapServer(self, next_server):
@@ -161,23 +165,3 @@ class Logger:
                 return
 
         raise ValueError(formattedLogMsg(f'Server {next_server} not found in servers..','ERROR'))
-
-    # Helper function for clearing server links and server auction data
-    def _clearData(self):
-        self.auction = {
-            "hour": {
-                "start": None,
-                "end": None,
-                "items": []
-            },
-            "day":  {
-                "start": None,
-                "end": None,
-                "items": []
-            },
-            "week":  {
-                "start": None,
-                "end": None,
-                "items": []
-            },
-        }
