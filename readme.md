@@ -6,6 +6,7 @@
 ## Requirements
 - Python (3.18.10)
 - beautifulsoup4 (4.11.1)
+- lxml (4.9.0)
 - python-dotenv (0.20.0)
 - requests (2.28.0)
 
