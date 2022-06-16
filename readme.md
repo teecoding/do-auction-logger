@@ -21,9 +21,17 @@
 
 ## Installation
 
+### Local 
+- Clon this repo `git clone https://github.com/teecoding/do-auction-logger.git`
 - Create virtual enviroment with one of the following commands:
     - `virtualenv venv`
     - `python3 -m venv` 
 - Install requirements in venv: `pip install -r /path/to/requirements.txt` 
 - Copy `.env.example` into `.env` and fill your credentials
-- Run `main.py` 
+- Run script: `python main.py` 
+
+### Docker 
+- Clon this repo `git clone https://github.com/teecoding/do-auction-logger.git`
+- Copy `.env.example` into `.env` and fill your credentials
+- Build docker image: `docker build . --no-cache -t do-auction-logger`
+- Run docker: `docker run -v <path_to_fodler_where_you_wanna_store_logged_jsons>:/do-auction-logger/data do-auction-logger:latest`
