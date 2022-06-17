@@ -4,10 +4,10 @@ WORKDIR /do-auction-logger
 
 RUN apk add --no-cache ffmpeg \
     curl \ 
-    git \
-    git clone https://github.com/teecoding/do-auction-logger.git . \
-    pip install --upgrade pip \
-    pip install -r requirements.txt \ 
+    git && \
+    git clone https://github.com/teecoding/do-auction-logger.git . && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt && \ 
     chmod +x *.py
 
 COPY .env .
