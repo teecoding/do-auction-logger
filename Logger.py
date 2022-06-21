@@ -34,26 +34,27 @@ class Logger:
 
     # Start logging auction data from servers
     def start(self):
-        for auction_type in AUCTION_TYPES:
-            self._log(auction_type)
-
-        self._swapServer(SERVERS[0])
-            
-        for id, server in enumerate(SERVERS):
-            self.current_server = SERVERS[id]
-
-            self._load()
-
+        while True:
             for auction_type in AUCTION_TYPES:
                 self._log(auction_type)
 
-            try: 
-                if SERVERS[id+1] != self.server_after_login:
-                    self._swapServer(SERVERS[id+1])
-                else:
-                    self.current_server = SERVERS[id-1]
-            except:
-                break
+            self._swapServer(SERVERS[0])
+
+            for id, server in enumerate(SERVERS):
+                self.current_server = SERVERS[id]
+
+                self._load()
+
+                for auction_type in AUCTION_TYPES:
+                    self._log(auction_type)
+
+                try: 
+                    if SERVERS[id+1] != self.server_after_login:
+                        self._swapServer(SERVERS[id+1])
+                    else:
+                        self.current_server = SERVERS[id-1]
+                except:
+                    break
         print(formattedLogMsg('Done.'))
 
     # Create necessary folders if they don't exist
