@@ -81,6 +81,7 @@ class Logger:
         res = self.session.get(f"https://{self.current_server}.darkorbit.com/indexInternal.es?action=internalAuction&lang=en")
         self.soup = BeautifulSoup(res.content, 'lxml')
         
+        print(formattedLogMsg(f'User: {os.getenv('USERNAME')} Password: {os.getenv('PASSWORD')}', 'DEBUG'))
         with open('test.html', 'w+') as f:
             f.write(self.soup.prettify())
             f.close()
