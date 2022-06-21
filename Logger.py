@@ -80,7 +80,11 @@ class Logger:
         }
         res = self.session.get(f"https://{self.current_server}.darkorbit.com/indexInternal.es?action=internalAuction&lang=en")
         self.soup = BeautifulSoup(res.content, 'lxml')
-
+        
+        with open('./data/test.html', 'w+') as f:
+            f.write(self.soup.prettify())
+            f.close()
+            
         for auction_type in AUCTION_TYPES:
             self._getStartEndDate(auction_type)
             self._getItems(auction_type)
