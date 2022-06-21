@@ -81,14 +81,11 @@ class Logger:
         res = self.session.get(f"https://{self.current_server}.darkorbit.com/indexInternal.es?action=internalAuction&lang=en")
         self.soup = BeautifulSoup(res.content, 'lxml')
 
-        try:
-            for auction_type in AUCTION_TYPES:
-                self._getStartEndDate(auction_type)
-                self._getItems(auction_type)
-            self._getServerLinks()
-        except:
-            print(formattedLogMsg('Unable to get auction data. Are you sure you have correct credentials?', 'ERROR'))
-            exit()
+        for auction_type in AUCTION_TYPES:
+            self._getStartEndDate(auction_type)
+            self._getItems(auction_type)
+        self._getServerLinks()
+        
 
     # Get latest auction items
     def _getItems(self, auction_type):
