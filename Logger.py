@@ -82,7 +82,7 @@ class Logger:
         self.soup = BeautifulSoup(res.content, 'lxml')
         
         print(formattedLogMsg(f'User: {os.getenv('USERNAME')} Password: {os.getenv('PASSWORD')}', 'DEBUG'))
-        with open('test.html', 'w+') as f:
+        with open('./data/test.html', 'w+') as f:
             f.write(self.soup.prettify())
             f.close()
 
