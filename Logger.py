@@ -70,7 +70,7 @@ class Logger:
         r = self.session.post(form['action'], data={"username": os.getenv('USERNAME'), "password": os.getenv('PASSWORD')})
         self.server_after_login = self.current_server = r.url.split('//')[-1].split('.')[0]
         with open('./data/login_output.html', 'w+') as f:
-            f.write(BeautifulSoup(res.content, 'lxml').prettify())
+            f.write(BeautifulSoup(r.content, 'lxml').prettify())
             f.close()
         self._load()
 
