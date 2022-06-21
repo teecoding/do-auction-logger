@@ -69,9 +69,6 @@ class Logger:
         form = soup.find('form', {"class":"bgcdw_login_form"})
         r = self.session.post(form['action'], data={"username": os.getenv('USERNAME'), "password": os.getenv('PASSWORD')})
         self.server_after_login = self.current_server = r.url.split('//')[-1].split('.')[0]
-        with open('./data/login_output.html', 'w+') as f:
-            f.write(BeautifulSoup(r.content, 'lxml').prettify())
-            f.close()
         self._load()
 
     # Load auction and scrappe data from it
@@ -83,11 +80,6 @@ class Logger:
         }
         res = self.session.get(f"https://{self.current_server}.darkorbit.com/indexInternal.es?action=internalAuction&lang=en")
         self.soup = BeautifulSoup(res.content, 'lxml')
-        
-        print(formattedLogMsg(f"User: {os.getenv('USERNAME')} Password: {os.getenv('PASSWORD')}", 'DEBUG'))
-        with open('./data/test.html', 'w+') as f:
-            f.write(self.soup.prettify())
-            f.close()
 
         for auction_type in AUCTION_TYPES:
             self._getStartEndDate(auction_type)
